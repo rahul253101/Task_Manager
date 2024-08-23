@@ -47,7 +47,15 @@ router.post('/users',async(req,res)=>{
 
 router.get('/users/me', auth,async(req,res)=>{
 
-    res.send(req.user)
+    try{
+        if (req.user){
+            res.status(200).send(req.user)
+        }
+
+    }catch(error){
+        res.status(404).send()
+    }
+
 
     // try{
     //     const users = await user.find({})
@@ -82,7 +90,7 @@ router.post('/users/logout', auth, async(req,res)=>{
         await user.save()
         res.send()
     }catch(error){
-        res.send(error).status(500)
+        res.status(500).send(error)
     }
 })
 
@@ -93,7 +101,7 @@ router.post('/users/logoutAll',auth,async(req,res)=>{
         await user.save()
         res.send()
     }catch(error){
-        res.send(error).status(500)
+        res.status(500).send(error)
     }
 })
 
@@ -105,7 +113,7 @@ router.patch('/users/me',auth,async(req,res)=>{
     })
 
     if(!isValid){
-        return res.send('invalid updates').status(404)
+        return res.status(404).send('invalid updates')
     }
 
     try{
@@ -123,17 +131,20 @@ router.patch('/users/me',auth,async(req,res)=>{
             reqUser[update] = req.body[update]
         })
         if(!reqUpdates){
-            return res.send().status(404)
+            return res.status(404).send()
         }
         const updatedData = await reqUser.save()
-        res.send(updatedData).status(200)
+        res.status(200).send(updatedData)
     }catch(error){
-        res.send(error).status(500)
+        res.status(500).send(error)
     }
 })
 
 router.delete('/users/me',auth,async(req,res)=>{
     try{
+        console.log(req.user._id)
+        await user.findByIdAndDelete(req.user._id)
+        // await req.user.remove()
         const mailOptions = {
           from: 'rahulj2501@gmail.com',
           to: `${req.body.email}`,
@@ -147,23 +158,24 @@ router.delete('/users/me',auth,async(req,res)=>{
             console.log('Email sent: ' + info.response);
           }
         });
-        await req.user.delete
-        res.send(req.user)
+
+        res.status(200).send(req.user)
     }catch(error){
-        res.send(error).status(500)
+        res.status(500).send(error)
     }
 })
 
-router.post('/users/login',auth,async(req,res)=>{
-    try{
-        console.log(req.body.email, req.body.password)
-        const userData = await user.findByCrenditials(req.body.email, req.body.password)
-        const token = userData.generateAuthTokens()
-        res.send({userData,token}).status(200)
-    }catch(error){
-        res.send(error).status(404)
+router.post('/users/login', async (req, res) => {
+    try {
+        console.log(req.body.email, req.body.password);
+        const userData = await user.findByCrenditials(req.body.email, req.body.password);
+        const token = await userData.generateAuthTokens();
+        res.status(200).send({ userData, token }); // Set status before sending response
+    } catch (error) {
+        res.status(404).send({ error: 'Invalid credentials' }); // Set status before sending response
     }
-})
+});
+
 
 const upload = multer({
     limits: {
@@ -189,15 +201,15 @@ router.post('/users/me/avatar',auth,upload.single('avatar'),async(req,res)=>{
     const buffer = await sharp(req.file.buffer).resize({width:250, height:250}).png().toBuffer()
     req.user.avatar = buffer
     await req.user.save()
-    res.send().status(201)
+    res.status(201).send()
 },(error,req,res,next)=>{
-    res.send({error:error.message}).status(400)
+    res.status(400).send({error:error.message})
 })
 
 router.delete('/users/me/avatar',auth,async(req,res)=>{
     req.user.avatar = undefined
     await req.user.save()
-    res.send().status(200)
+    res.status(200).send()
 })
 
 router.get('/users/:id/avatar',async(req,res)=>{
@@ -211,7 +223,7 @@ router.get('/users/:id/avatar',async(req,res)=>{
         res.set('Content-Type','image/png')
         res.send(userx.avatar)
     }catch(error){
-        res.send().status(404)
+        res.status(404).send()
     }
 })
 
